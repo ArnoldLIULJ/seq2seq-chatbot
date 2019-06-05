@@ -9,6 +9,7 @@ from tqdm import tqdm
 from sklearn.utils import shuffle
 from data.twitter import data
 from tensorlayer.models.seq2seq import Seq2seq
+from tensorlayer.models.seq2seq_with_attention import Seq2seq_Attention
 import os
 
 
@@ -61,10 +62,10 @@ if __name__ == "__main__":
     
 
 
-    def inference(seed, top_n):
+    def inference(seed):
         model_.eval()
         seed_id = [word2idx.get(w, unk_id) for w in seed.split(" ")]
-        sentence_id = model_(inputs=[seed_id], seq_length=20, start_token=start_id, top_n = top_n)
+        sentence_id = model_(inputs=[[seed_id]], seq_length=20, sos=start_id)
         sentence = []
         for w_id in sentence_id[0]:
             w = idx2word[w_id]
@@ -74,13 +75,11 @@ if __name__ == "__main__":
         return sentence
 
     decoder_seq_length = 20
-    model_ = Seq2seq(
-        decoder_seq_length = decoder_seq_length,
-        cell_enc=tf.keras.layers.GRUCell,
-        cell_dec=tf.keras.layers.GRUCell,
-        n_layer=3,
-        n_units=256,
+    model_ = Seq2seq_Attention(
+        hidden_size = 128,
+        cell = tf.keras.layers.GRUCell,
         embedding_layer=tl.layers.Embedding(vocabulary_size=vocabulary_size, embedding_size=emb_dim),
+        method = "general"
         )
     
     optimizer = tf.optimizers.Adam(learning_rate=0.001)
@@ -121,10 +120,8 @@ if __name__ == "__main__":
 
         for seed in seeds:
             print("Query >", seed)
-            top_n = 3
-            for i in range(top_n):
-                sentence = inference(seed, top_n)
-                print(" >", ' '.join(sentence))
+            sentence = inference(seed)
+            print(" >", ' '.join(sentence))
 
 
         
